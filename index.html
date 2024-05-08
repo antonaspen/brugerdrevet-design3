@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>TooGoodNotToTake</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      background-color: #f4f4f9;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      color: #333;
+    }
+
+    .menu {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      color: #333366;
+      margin-bottom: 1rem;
+    }
+
+    h2 {
+      text-align: center;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      color: white;
+      background-color: limegreen;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      transition: background-color 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .large-button {
+      padding: 20px 40px;
+      font-size: 20px;
+    }
+
+    .small-button {
+      padding: 5px 10px;
+      font-size: 12px;
+      background-color: limegreen;
+    }
+
+    button:hover, .small-button:hover {
+      background-color: #0056b3;
+      box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .section {
+      width: 90%;
+      padding: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      border-radius: 5px;
+      margin-top: 20px;
+    }
+
+    .mad-item {
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px;
+      border-radius: 5px;
+    }
+
+    .reserved {
+      background-color: #f8d7da;
+      color: #721c24;
+      border-color: #f5c6cb;
+    }
+
+    .mad-info {
+      flex: 1;
+      display: flex;
+      align-items: center;
+    }
+
+    .mad-controls {
+      flex-grow: 1;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+    }
+
+    .mad-item img {
+      max-width: 100px;
+      height: auto;
+      margin-left: 10px;
+      cursor: pointer;
+      transition: transform 0.3s ease;
+    }
+
+    .enlarged {
+      position: fixed;
+      z-index: 1000;
+      max-width: 50%;
+      max-height: 80vh;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.5), 0 0 0 10px rgba(255, 255, 255, 1);
+      cursor: pointer;
+    }
+
+    input[type="text"] {
+      padding: 5px;
+      font-size: 12px;
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body>
+<div class="menu">
+  <h1>TooGoodNotToTake</h1>
+  <button id="backButton" class="small-button hidden">Tilbage til menu</button>
+  <button id="viewFood" class="large-button">Se og tag mad</button>
+  <button id="addFood" class="large-button">Indsæt mad</button>
+</div>
+<div id="viewSection" class="section hidden">
+  <h2>FoodToTake</h2>
+  <div id="madListeView">
+    <!-- Dynamic content to view and reserve food will go here -->
+  </div>
+</div>
+<div id="addSection" class="section hidden">
+  <h2>Tilføj mad til listen</h2>
+  <input type="text" id="nytNavnInput" placeholder="Indtast navn på mad" />
+  <button id="addNameBtn" class="small-button">Tilføj Mad</button>
+  <div id="madListeAdd">
+    <!-- Names will be added here dynamically -->
+  </div>
+</div>
+<div id="errorMessage" class="hidden" style="color: red;"></div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const backButton = document.getElementById('backButton');
+    const viewBtn = document.getElementById('viewFood');
+    const addBtn = document.getElementById('addFood');
+    const viewSection = document.getElementById('viewSection');
+    const addSection = document.getElementById('addSection');
+    const madListeView = document.getElementById('madListeView');
+    const madListeAdd = document.getElementById('madListeAdd');
+    const addNameBtn = document.getElementById('addNameBtn');
+    const navnInput = document.getElementById('nytNavnInput');
+    const errorMessage = document.getElementById('errorMessage');
+
+    function toggleMenu() {
+      viewSection.classList.add('hidden');
+      addSection.classList.add('hidden');
+      viewBtn.classList.remove('hidden');
+      addBtn.classList.remove('hidden');
+      backButton.classList.add('hidden');
+    }
+
+    backButton.addEventListener('click', toggleMenu);
+
+    viewBtn.addEventListener('click', function() {
+      viewSection.classList.remove('hidden');
+      addSection.classList.add('hidden');
+      viewBtn.classList.add('hidden');
+      addBtn.classList.add('hidden');
+      backButton.classList.remove('hidden');
+      updateButtonVisibility(false); // Skjul rediger/slet/tilføj billede knapper
+    });
+
+    addBtn.addEventListener('click', function() {
+      addSection.classList.remove('hidden');
+      viewSection.classList.add('hidden');
+      viewBtn.classList.add('hidden');
+      addBtn.classList.add('hidden');
+      backButton.classList.remove('hidden');
+      updateButtonVisibility(true); // Vis rediger/slet/tilføj billede knapper
+    });
+
+    addNameBtn.addEventListener('click', function() {
+      if (navnInput.value.trim() !== '') {
+        const madItem = { navn: navnInput.value.trim(), img: null };
+        saveMadItem(madItem);
+        navnInput.value = '';
+        loadMadListe(madListeView);
+        loadMadListe(madListeAdd);
+      } else {
+        showError("Navnet på maden kan ikke være tomt.");
+      }
+    });
+
+    function loadMadListe(targetElement) {
+      const mads = JSON.parse(localStorage.getItem('madListe')) || [];
+      targetElement.innerHTML = '';
+      mads.forEach(madItem => targetElement.appendChild(createMadElement(madItem)));
+    }
+
+    function createMadElement(madItem) {
+      const madElement = document.createElement('div');
+      madElement.className = 'mad-item';
+
+      const info = document.createElement('div');
+      info.className = 'mad-info';
+      info.textContent = madItem.navn;
+
+      const controls = document.createElement('div');
+      controls.className = 'mad-controls';
+
+      const reserveBtn = document.createElement('button');
+      reserveBtn.textContent = 'Reserver';
+      reserveBtn.className = 'small-button';
+      reserveBtn.onclick = () => reserveItem(madItem, madElement);
+
+      const imgBtn = document.createElement('button');
+      imgBtn.textContent = 'Tilføj/Rediger billede';
+      imgBtn.className = 'small-button img-btn';
+      imgBtn.onclick = () => {
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = 'image/*';
+        fileInput.onchange = e => handleImageChange(e, madItem, madElement);
+        fileInput.click();
+      };
+
+      const editBtn = document.createElement('button');
+      editBtn.textContent = 'Rediger navn';
+      editBtn.className = 'small-button edit-btn';
+      editBtn.onclick = () => {
+        const newNavn = prompt("Rediger navn på mad:", madItem.navn);
+        if (newNavn && newNavn !== madItem.navn) {
+          madItem.navn = newNavn;
+          info.textContent = newNavn;
+          saveChanges();
+        }
+      };
+
+      const deleteBtn = document.createElement('button');
+      deleteBtn.textContent = 'Slet';
+      deleteBtn.className = 'small-button delete-btn';
+      deleteBtn.onclick = () => {
+        removeMadItem(madItem);
+        madElement.remove();
+      };
+
+      controls.appendChild(editBtn);
+      controls.appendChild(deleteBtn);
+      controls.appendChild(reserveBtn);
+      controls.appendChild(imgBtn);
+
+      madElement.appendChild(info);
+      madElement.appendChild(controls);
+
+      if (madItem.img) {
+        const img = document.createElement('img');
+        img.src = madItem.img;
+        img.onclick = () => toggleEnlarge(img);
+        info.appendChild(img);
+      }
+
+      return madElement;
+    }
+
+    function updateButtonVisibility(show) {
+      const editButtons = document.querySelectorAll('.edit-btn');
+      const deleteButtons = document.querySelectorAll('.delete-btn');
+      const imgButtons = document.querySelectorAll('.img-btn');
+
+      editButtons.forEach(btn => btn.style.display = show ? 'inline-block' : 'none');
+      deleteButtons.forEach(btn => btn.style.display = show ? 'inline-block' : 'none');
+      imgButtons.forEach(btn => btn.style.display = show ? 'inline-block' : 'none');
+    }
+
+    function saveMadItem(madItem) {
+      const mads = JSON.parse(localStorage.getItem('madListe')) || [];
+      mads.push(madItem);
+      localStorage.setItem('madListe', JSON.stringify(mads));
+    }
+
+    function saveChanges() {
+      const mads = JSON.parse(localStorage.getItem('madListe')) || [];
+      localStorage.setItem('madListe', JSON.stringify(mads));
+    }
+
+    function removeMadItem(madItemToRemove) {
+      let mads = JSON.parse(localStorage.getItem('madListe')) || [];
+      mads = mads.filter(madItem => madItem !== madItemToRemove);
+      localStorage.setItem('madListe', JSON.stringify(mads));
+    }
+
+    function handleImageChange(event, madItem, madElement) {
+      const file = event.target.files[0];
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        madItem.img = e.target.result;
+        updateAllMadElementsImage(madItem);
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function updateAllMadElementsImage(madItem) {
+      const allMadElements = document.querySelectorAll('.mad-item');
+      allMadElements.forEach(element => {
+        if (element.querySelector('.mad-info').textContent.includes(madItem.navn)) {
+          let img = element.querySelector('img');
+          if (!img) {
+            img = document.createElement('img');
+            img.onclick = () => toggleEnlarge(img);
+            element.querySelector('.mad-info').appendChild(img);
+          }
+          img.src = madItem.img;
+        }
+      });
+    }
+
+    function toggleEnlarge(img) {
+      if (img.classList.contains('enlarged')) {
+        img.classList.remove('enlarged');
+        img.style.transform = '';
+      } else {
+        img.classList.add('enlarged');
+        img.style.transform = 'scale(2)';
+      }
+    }
+
+    function reserveItem(madItem, madElement) {
+      madElement.classList.toggle('reserved');
+      if (madElement.classList.contains('reserved')) {
+        const nameInput = prompt("Skriv dit navn for at reservere maden:");
+        if (nameInput) {
+          madItem.reservedBy = nameInput;
+          madElement.querySelector('.mad-info').textContent += ` - Reserveret af ${nameInput}`;
+        } else {
+          madElement.classList.remove('reserved');
+        }
+      } else {
+        delete madItem.reservedBy;
+        madElement.querySelector('.mad-info').textContent = madItem.navn;
+      }
+      saveChanges();
+    }
+
+    function showError(message) {
+      errorMessage.textContent = message;
+      errorMessage.classList.remove('hidden');
+      setTimeout(() => errorMessage.classList.add('hidden'), 3000);
+    }
+
+  });
+</script>
+</body>
+</html>
